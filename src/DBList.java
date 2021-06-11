@@ -16,7 +16,7 @@ public class DBList {
     }
     public void Set(String db,List<String> tables){
         lock.writeLock().lock();
-        DBMap.replace(db,tables);
+        DBMap.put(db,tables);
         lock.writeLock().unlock();
     }
     public Map<String,List<String>> GetList(){

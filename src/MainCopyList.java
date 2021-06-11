@@ -16,7 +16,7 @@ public class MainCopyList {
     }
     public void Set(String table,String host){
         lock.writeLock().lock();
-        MainCopies.replace(host,table);
+        MainCopies.put(host,table);
         lock.writeLock().unlock();
     }
     public Map<String,String> GetList(){

@@ -7,8 +7,6 @@ import java.util.concurrent.CountDownLatch;
 import org.apache.zookeeper.*;
 import org.apache.zookeeper.data.Stat;
 
-
-
 class DBMonitor implements Watcher {
     private static CountDownLatch connectedSemaphore = new CountDownLatch(1);
     private static ZooKeeper zk = null;
@@ -61,15 +59,21 @@ class DBMonitor implements Watcher {
                 this);
         //等待zk连接成功的通知
         connectedSemaphore.await();
-        System.out.println("Zookeeper connected.");
+        System.out.println("Zookeeper connected.\n");
         if(zk.exists(DBPath,false)==null){
             zk.create(DBPath,"DBRoot".getBytes(StandardCharsets.UTF_8), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
         }
         //获取path目录节点的配置数据，并注册默认的监听器
         System.out.println(new String(zk.getData(DBPath, true, stat)));
-        zk.exists(MainCopyPath,new DBMasterWatcher());
+        if(zk.exists(MainCopyPath,false)==null){
+            zk.create(MainCopyPath,"DBMainCopy".getBytes(StandardCharsets.UTF_8), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+        }
+        updateMainCopyList(zk.getChildren(MainCopyPath,new DBMasterWatcher()));
+        System.out.println("Current MainCopies:"+MainCopies.GetList());
         clients.Update(zk.getChildren(DBPath, DBClientsWatcher));
+        System.out.println("\nCurrent Clients:"+clients.GetList());
         updateDBList();
+        System.out.println("\nCurrent DB:"+dbList.GetList());
         Thread.sleep(Integer.MAX_VALUE);
     }
 
@@ -86,13 +90,26 @@ class DBMonitor implements Watcher {
         }
     }
 
-    private void updateDBList(){
+    private void updateMainCopyList(List<String> tables){//update and set watcher for it
+        Map<String,String> new_list=new HashMap<>();
+        for (String tbl:tables
+             ) {
+            try {
+                new_list.put(tbl,new String(zk.getData(MainCopyPath+"/"+tbl,new DBMainCopyWatcher(tbl),new Stat())));
+            } catch (KeeperException | InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        MainCopies.Update(new_list);
+    }
+
+    private void updateDBList(){//init dblist, should be called when really needed
         Map<String, List<String>> new_list= new HashMap<>() ;
         for (String client:clients.GetList()
              ) {
             try {
-                String tables=new String(zk.getData(DBPath,false,new Stat()));
-                new_list.replace(client, Arrays.asList(tables.split(",")));
+                String tables=new String(zk.getData(DBPath+"/"+client,new DBClientWatcher(client),new Stat()));
+                new_list.put(client, Arrays.asList(tables.split(",")));
             }catch (Exception e){
                 e.printStackTrace();
             }
@@ -129,10 +146,10 @@ class DBMonitor implements Watcher {
                 try {
                     //Get current tables of this DBClient,
                     //reset the watch
-                    String tables= Arrays.toString(zk.getData(DBPath + "/" + ClientName, this, cliStat));
+                    String tables= new String(zk.getData(DBPath + "/" + ClientName, this, cliStat));
                     dbList.Set(ClientName, Arrays.asList(tables.split(",")));
                     System.out.println("!!!DBClient tables changed!!!");
-                    System.out.println("Current table: " + dbList.GetTables(ClientName));
+                    System.out.println("Current table: "+ClientName+"=" + dbList.GetTables(ClientName));
                 } catch (KeeperException e) {
                     throw new RuntimeException(e);
                 } catch (InterruptedException e) {

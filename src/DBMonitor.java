@@ -1,6 +1,7 @@
 import java.nio.charset.StandardCharsets;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
+import java.sql.Time;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 
@@ -36,7 +37,6 @@ class DBMonitor implements Watcher {
                         String tables= Arrays.toString(zk.getData(DBPath +"/"+newCli, new DBClientWatcher(newCli), stat));
                         dbList.Set(newCli, Arrays.asList(tables.split(",")));
                     }
-
                     clients.Update(newList);
                     System.out.println("!!!Cluster Membership Change!!!");
                     System.out.println("Members: " + clients.GetList());
@@ -121,10 +121,11 @@ class DBMonitor implements Watcher {
 
         }
         public String getTable(String table_name,int method) throws RemoteException {//0:read 1:modify 2:create 3:drop
+            String TimeStamp= Long.toString(System.currentTimeMillis());
             switch(method){
-                case 0: return dbList.lookupTable(table_name);
-                case 1: case 3: return MainCopies.lookupMainCopy(table_name);
-                case 2: return clients.allocateDB();
+                case 0: return TimeStamp+"."+ dbList.lookupTable(table_name);
+                case 1: case 3: return TimeStamp+"."+ MainCopies.lookupMainCopy(table_name);
+                case 2: return TimeStamp+"."+ clients.allocateDB();
                 default: return null;
             }
         }

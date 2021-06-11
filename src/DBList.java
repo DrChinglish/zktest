@@ -49,20 +49,17 @@ public class DBList {
 
     public String lookupTable(String table){
         Random r=new Random();
-        StringBuilder clients= new StringBuilder();
+        List<String> clients= new ArrayList<>();
         lock.readLock().lock();
         for (Map.Entry<String,List<String>> client:DBMap.entrySet()
              ) {
-            if(clients.length()!=0){
-                clients.append(",");
-            }
                 if(client.getValue().contains(table)){
-                    clients.append(client);
+                    clients.add(client.getKey());
                 }
         }
         lock.readLock().unlock();
-        if(clients.length() > 0)
-            return clients.toString();
+        if(clients.size() > 0)
+            return clients.get(r.nextInt(clients.size()));
         else
             return null;
     }

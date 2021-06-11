@@ -47,7 +47,7 @@ public class DBList {
         }
     }
 
-    public String lookupTable(String table){
+    public String lookupTable(String table){//randomly returns a DB for read
         Random r=new Random();
         List<String> clients= new ArrayList<>();
         lock.readLock().lock();

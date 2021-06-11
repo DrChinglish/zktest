@@ -18,7 +18,6 @@ class DBMonitor implements Watcher {
     private static MainCopyList MainCopies=new MainCopyList();
     boolean alive=true;
     private static  ClientList clients=new ClientList();
-    private String master=null;
     public DBServerRPC RPCAPI;
     private final Watcher DBClientsWatcher =new Watcher() {
         @Override
@@ -53,7 +52,7 @@ class DBMonitor implements Watcher {
     };
 
     protected DBMonitor() throws Exception{
-        RPCAPI=new DBServerRPC();
+        RPCAPI= new DBServerRPC();
         //连接zookeeper并且注册一个默认的监听器
         zk = new ZooKeeper("localhost:2181", 5000, //
                 this);
@@ -117,17 +116,21 @@ class DBMonitor implements Watcher {
         dbList.Update(new_list);
     }
 
-    public class DBServerRPC extends UnicastRemoteObject implements IRemoteCli{
+    public static class DBServerRPC extends UnicastRemoteObject implements IRemoteCli{
         protected DBServerRPC()throws RemoteException{
 
         }
         public String getTable(String table_name,int method) throws RemoteException {//0:read 1:modify 2:create 3:drop
             switch(method){
                 case 0: return dbList.lookupTable(table_name);
-                case 1: case 3: return master+","+dbList.lookupTable(table_name);
-                case 2: return master+","+clients.allocateDB();
+                case 1: case 3: return MainCopies.lookupMainCopy(table_name);
+                case 2: return clients.allocateDB();
                 default: return null;
             }
+        }
+
+        public String SyncTable(String table_name) throws RemoteException{
+            return MainCopies.lookupMainCopy(table_name);
         }
     }
 
@@ -194,12 +197,6 @@ class DBMonitor implements Watcher {
                         System.out.println("!!!New MainCopy Assigned!!!");
                         System.out.println("New Tables: " + added);
                     }
-                } catch (KeeperException | InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }else if (event.getType() == Event.EventType.NodeCreated){
-                try {
-                    master= Arrays.toString(zk.getData(MainCopyPath, this, masterStat));
                 } catch (KeeperException | InterruptedException e) {
                     e.printStackTrace();
                 }

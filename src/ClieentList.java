@@ -1,13 +1,10 @@
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 class ClientList {
     private ReentrantReadWriteLock lock=new ReentrantReadWriteLock();
     private List<String> Clients;
-
+    private static final int MAX_COPIES = 2;
     public ClientList(){
         Clients=new ArrayList<>();
     }
@@ -38,8 +35,24 @@ class ClientList {
 
     public String allocateDB(){
         Random r=new Random();
-        if(!Clients.isEmpty())
-            return Clients.get(r.nextInt(Clients.size()-1));
+        StringBuilder res=new StringBuilder();
+        lock.readLock().lock();
+        if(!Clients.isEmpty()) {
+            Set<Integer> selected=new HashSet<>();
+            while(selected.size()<Math.min(MAX_COPIES,Clients.size())){
+                selected.add(r.nextInt(Clients.size()));
+            }
+
+            for (Integer i:selected
+                 ) {
+                if(res.length()!=0){
+                    res.append(",");
+                }
+                res.append(Clients.get(i));
+            }
+            lock.readLock().lock();
+            return res.toString();
+        }
         else
             return null;
     }

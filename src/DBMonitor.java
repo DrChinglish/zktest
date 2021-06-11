@@ -15,8 +15,9 @@ class DBMonitor implements Watcher {
     private static Stat stat = new Stat();
     //zookeeper配置数据存放路径
     private String DBPath = "/DBRoot";
-    private String MasterPath="/Master";
+    private String MainCopyPath="/MainCopy";
     private static DBList dbList=new DBList();
+    private static MainCopyList MainCopies=new MainCopyList();
     boolean alive=true;
     private static  ClientList clients=new ClientList();
     private String master=null;
@@ -66,7 +67,7 @@ class DBMonitor implements Watcher {
         }
         //获取path目录节点的配置数据，并注册默认的监听器
         System.out.println(new String(zk.getData(DBPath, true, stat)));
-        zk.exists(MasterPath,new DBMasterWatcher());
+        zk.exists(MainCopyPath,new DBMasterWatcher());
         clients.Update(zk.getChildren(DBPath, DBClientsWatcher));
         updateDBList();
         Thread.sleep(Integer.MAX_VALUE);
@@ -153,7 +154,7 @@ class DBMonitor implements Watcher {
         }
     }
 
-    private class  DBMasterWatcher implements Watcher{
+    private class  DBMasterWatcher implements Watcher{//watcher for main copy path
         private Stat masterStat;
         public DBMasterWatcher(){
             masterStat=new Stat();
@@ -161,19 +162,44 @@ class DBMonitor implements Watcher {
         @Override
         public void process(WatchedEvent event) {
             System.out.printf("\nEvent Received: %s", event.toString());
-            if (event.getType() == Event.EventType.NodeDeleted){
+            if (event.getType() == Event.EventType.NodeChildrenChanged){
                 try {
-                    master=null;
-                    masterStat=zk.exists(MasterPath,this);
+                    List<String> newList=zk.getChildren(MainCopyPath, this);
+                    List<String> added = new ArrayList<>(newList);
+                    added.removeAll(MainCopies.GetTables());
+                    for (String newCopy:added
+                    ) {
+                        //set watcher for new client
+                        String hostname= Arrays.toString(zk.getData(MainCopyPath +"/"+newCopy, new DBMainCopyWatcher(newCopy), masterStat));
+                        MainCopies.Set(newCopy, hostname);
+                    }
+                    if(!added.isEmpty()) {
+                        System.out.println("!!!New MainCopy Assigned!!!");
+                        System.out.println("New Tables: " + added);
+                    }
                 } catch (KeeperException | InterruptedException e) {
                     e.printStackTrace();
                 }
             }else if (event.getType() == Event.EventType.NodeCreated){
                 try {
-                    master= Arrays.toString(zk.getData(MasterPath, this, masterStat));
+                    master= Arrays.toString(zk.getData(MainCopyPath, this, masterStat));
                 } catch (KeeperException | InterruptedException e) {
                     e.printStackTrace();
                 }
+            }
+        }
+    }
+
+    private class  DBMainCopyWatcher implements Watcher{//watcher for each main copy
+        private String table_name;
+        public DBMainCopyWatcher(String table_name){
+            this.table_name=table_name;
+        }
+        @Override
+        public void process(WatchedEvent event) {
+            System.out.printf("\nEvent Received: %s", event.toString());
+            if (event.getType() == Event.EventType.NodeDeleted){
+                    MainCopies.deleteClient(table_name);
             }
         }
     }

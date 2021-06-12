@@ -129,7 +129,10 @@ class DBMonitor implements Watcher,Runnable {
             switch(method){
                 case 0: return TimeStamp+","+ dbList.lookupTable(table_name);
                 case 1: case 3: return TimeStamp+","+ MainCopies.lookupMainCopy(table_name);
-                case 2: return TimeStamp+","+ clients.allocateDB();
+                case 2: if(MainCopies.lookupMainCopy(table_name)==null)
+                            return TimeStamp+","+ clients.allocateDB();
+                        else
+                            return "ErrCode:0";
                 default: return null;
             }
         }

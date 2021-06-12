@@ -7,7 +7,7 @@ import java.util.concurrent.CountDownLatch;
 import org.apache.zookeeper.*;
 import org.apache.zookeeper.data.Stat;
 
-class DBMonitor implements Watcher {
+class DBMonitor implements Watcher,Runnable {
     private static CountDownLatch connectedSemaphore = new CountDownLatch(1);
     private static ZooKeeper zk = null;
     private static Stat stat = new Stat();
@@ -72,7 +72,7 @@ class DBMonitor implements Watcher {
         System.out.println("\nCurrent Clients:"+clients.GetList());
         updateDBList();
         System.out.println("\nCurrent DB:"+dbList.GetList());
-        Thread.sleep(Integer.MAX_VALUE);
+
     }
 
     public void process(WatchedEvent event) {
@@ -115,6 +115,11 @@ class DBMonitor implements Watcher {
         dbList.Update(new_list);
     }
 
+    @Override
+    public void run() {
+
+    }
+
     public static class DBServerRPC extends UnicastRemoteObject implements IRemoteCli{
         protected DBServerRPC()throws RemoteException{
 
@@ -122,9 +127,9 @@ class DBMonitor implements Watcher {
         public String getTable(String table_name,int method) throws RemoteException {//0:read 1:modify 2:create 3:drop
             String TimeStamp= Long.toString(System.currentTimeMillis());
             switch(method){
-                case 0: return TimeStamp+"."+ dbList.lookupTable(table_name);
-                case 1: case 3: return TimeStamp+"."+ MainCopies.lookupMainCopy(table_name);
-                case 2: return TimeStamp+"."+ clients.allocateDB();
+                case 0: return TimeStamp+","+ dbList.lookupTable(table_name);
+                case 1: case 3: return TimeStamp+","+ MainCopies.lookupMainCopy(table_name);
+                case 2: return TimeStamp+","+ clients.allocateDB();
                 default: return null;
             }
         }

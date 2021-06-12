@@ -2,6 +2,7 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 
 public class DBServer {
+    public static final int MAX_COPIES = 2;
     public static DBMonitor monitor;
     public static void main(String[] args)  {
         try {

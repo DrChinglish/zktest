@@ -4,7 +4,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 class ClientList {
     private ReentrantReadWriteLock lock=new ReentrantReadWriteLock();
     private List<String> Clients;
-    private static final int MAX_COPIES = 2;
+    private static final int MAX_COPIES = DBServer.MAX_COPIES;
     public ClientList(){
         Clients=new ArrayList<>();
     }

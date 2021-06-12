@@ -71,6 +71,7 @@ class DBMonitor implements Watcher,Runnable {
         clients.Update(zk.getChildren(DBPath, DBClientsWatcher));
         System.out.println("\nCurrent Clients:"+clients.GetList());
         updateDBList();
+
         System.out.println("\nCurrent DB:"+dbList.GetList());
 
     }
@@ -142,7 +143,13 @@ class DBMonitor implements Watcher,Runnable {
         }
     }
 
-
+    private void SetupNewCopy(Map<String,Integer> tables){
+        for(Map.Entry<String,Integer> table:tables.entrySet()){
+            int new_copies=table.getValue();
+            Set<String> allocated=dbList.allocateBackupDB(table.getKey(),new_copies);
+            //TODO:Send sync order to dedicated region server;
+        }
+    }
 
     private class  DBClientWatcher implements Watcher{//为每一个连接客户端创建的watcher
         private String ClientName;

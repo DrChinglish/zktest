@@ -16,7 +16,7 @@ public class MainCopyList {
     }
     public void Set(String table,String host){
         lock.writeLock().lock();
-        MainCopies.put(host,table);
+        MainCopies.put(table,host);
         lock.writeLock().unlock();
     }
     public Map<String,String> GetList(){
@@ -48,6 +48,7 @@ public class MainCopyList {
         if (MainCopies.containsKey(table)){
             lock.readLock().lock();
             String res=MainCopies.get(table);
+            System.out.println(res);
             lock.readLock().unlock();
             return res;
         }

@@ -36,8 +36,9 @@ class ClientList {
     public String allocateDB(){
         Random r=new Random();
         StringBuilder res=new StringBuilder();
-        lock.readLock().lock();
+
         if(!Clients.isEmpty()) {
+            lock.readLock().lock();
             Set<Integer> selected=new HashSet<>();
             while(selected.size()<Math.min(MAX_COPIES,Clients.size())){
                 selected.add(r.nextInt(Clients.size()));
@@ -50,7 +51,7 @@ class ClientList {
                 }
                 res.append(Clients.get(i));
             }
-            lock.readLock().lock();
+            lock.readLock().unlock();
             return res.toString();
         }
         else

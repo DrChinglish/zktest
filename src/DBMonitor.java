@@ -127,11 +127,20 @@ class DBMonitor implements Watcher,Runnable {
         }
         public String getTable(String table_name,int method) throws RemoteException {//0:read 1:modify 2:create 3:drop
             String TimeStamp= Long.toString(System.currentTimeMillis());
-            switch(method){
-                case 0: return TimeStamp+","+ dbList.lookupTable(table_name);
-                case 1: case 3: return TimeStamp+","+ MainCopies.lookupMainCopy(table_name);
-                case 2: if(MainCopies.lookupMainCopy(table_name)==null)
-                            return TimeStamp+","+ clients.allocateDB();
+            switch(method) {
+                case 0:
+                    return TimeStamp + "," + dbList.lookupTable(table_name);
+                case 1:
+                case 3:
+                    return TimeStamp + "," + MainCopies.lookupMainCopy(table_name);
+                case 2:
+                    if (MainCopies.lookupMainCopy(table_name) == null) {
+                        if(clients.allocateDB()!=null)
+                            return TimeStamp + "," + clients.allocateDB();
+                        else{
+                            return "ErrCode:1";
+                        }
+                    }
                         else
                             return "ErrCode:0";
                 default: return null;
@@ -181,8 +190,8 @@ class DBMonitor implements Watcher,Runnable {
                 if(!(dbList.deleteClient(ClientName)|| clients.deleteClient(ClientName))){
                     System.err.println("Cannot delete client:"+ClientName);
                 }
-                dbList.deleteClient(ClientName);
-                clients.deleteClient(ClientName);
+                //dbList.deleteClient(ClientName);
+                //clients.deleteClient(ClientName);
                 System.out.println("!!!DBClient deleted!!!");
                 System.out.println("Client quit: " + ClientName);
             }
@@ -205,13 +214,12 @@ class DBMonitor implements Watcher,Runnable {
                     for (String newCopy:added
                     ) {
                         //set watcher for new client
-                        String hostname= Arrays.toString(zk.getData(MainCopyPath +"/"+newCopy, new DBMainCopyWatcher(newCopy), masterStat));
+                        String hostname= new String(zk.getData(MainCopyPath +"/"+newCopy, new DBMainCopyWatcher(newCopy), masterStat));
                         MainCopies.Set(newCopy, hostname);
-                    }
-                    if(!added.isEmpty()) {
                         System.out.println("!!!New MainCopy Assigned!!!");
-                        System.out.println("New Tables: " + added);
+                        System.out.println("New Tables: "+hostname+"=" + added);
                     }
+
                 } catch (KeeperException | InterruptedException e) {
                     e.printStackTrace();
                 }
